@@ -13,6 +13,8 @@ on:
     branches: [main]
     paths:
       - "src/belay/**"
+      # The model run's own tools (judges, Ragas, red-team confirm, gate) live here too
+      - "src/qa/**"
       - "knowledge/**"
       - "datasets/**"
       - "promptfooconfig.redteam.yaml"

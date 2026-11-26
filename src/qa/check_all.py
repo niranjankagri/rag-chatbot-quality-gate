@@ -84,7 +84,18 @@ def red_team(python: str, npx: str, env: dict[str, str]) -> list[bool]:
     env = {**env, "PROMPTFOO_DISABLE_REDTEAM_REMOTE_GENERATION": "true", "PROMPTFOO_EVAL_TIMEOUT_MS": "300000"}
     ok = step(
         "red team: generate",
-        [*pf, "generate", "--max-concurrency", "1", "-c", "promptfooconfig.redteam.yaml", "-o", str(tests)],
+        [
+            *pf,
+            "generate",
+            # --strict: a plugin that generates nothing fails here, instead of quietly shrinking the scan
+            "--strict",
+            "--max-concurrency",
+            "1",
+            "-c",
+            "promptfooconfig.redteam.yaml",
+            "-o",
+            str(tests),
+        ],
         env,
     )
     if not ok or not tests.exists():
