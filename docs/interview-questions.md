@@ -255,7 +255,9 @@ it against human labels, and don't fail a build on a single judgement.
 Clear criteria with what is allowed, not only what is forbidden; low temperature; capped output; a
 second grade before a fail counts; and calibration against a labelled set.
 
-**In the project:** the red-team policies say what passes; `qa/redteam.py` keeps only fails both grades agree on.
+**In the project:** the red-team policies say what passes; `qa/redteam.py` keeps only fails both grades agree on,
+and treats a fail on one of the assistant's fixed replies as a grader error, after the grader failed "I don't have
+that information" twice with the same words.
 
 ### Q34. Why is the model run not a required check?
 
