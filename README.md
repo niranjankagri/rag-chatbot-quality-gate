@@ -67,34 +67,37 @@ they don't say it is good enough to ship.
 
 ## The real model, weekly
 
-`llama3.2:3b` answering, `qwen2.5:7b` judging, `nomic-embed-text` vectors, on a CPU runner. Three runs on
+`llama3.2:3b` answering, `qwen2.5:7b` judging, `nomic-embed-text` vectors, on a CPU runner. Four runs on
 26 Nov 2026 ([1](https://github.com/niranjankagri/rag-chatbot-quality-gate/actions/runs/45753237220),
 [2](https://github.com/niranjankagri/rag-chatbot-quality-gate/actions/runs/45760330978),
-[3](https://github.com/niranjankagri/rag-chatbot-quality-gate/actions/runs/45767278128)):
+[3](https://github.com/niranjankagri/rag-chatbot-quality-gate/actions/runs/45767278128),
+[4](https://github.com/niranjankagri/rag-chatbot-quality-gate/actions/runs/45776839063)):
 
-| Measure | Run 1 | Run 2 | Run 3 |
-|---|---:|---:|---:|
-| Core: right status / facts / grounded in its citation | 0.929 / 0.893 / 0.929 | 0.929 / 0.893 / 0.917 | 0.929 / 0.893 / 0.929 |
-| DeepEval Faithfulness / Answer Relevancy (12 judged) | 0.849 / 0.903 | 0.812 / 0.911 | 0.849 / 0.903 |
-| DeepEval G-Eval correctness (not gated, see below) | 0.564 | 0.564 | 0.564 |
-| Ragas faithfulness / context precision / recall (6) | 0.833 / 1.0 / 1.0 | 0.833 / 1.0 / 1.0 | 0.833 / 1.0 / 1.0 |
-| Ragas answer relevancy (6, not gated) | error | 0.723 | 0.596 |
-| Retrieval with real vectors: core recall / MRR | 0.913 / 0.957 | 0.913 / 0.957 | 0.913 / 0.957 |
-| Same status / citations / words, 8 questions x 5 | 1.0 / 1.0 / 1.0 | 1.0 / 0.875 / 0.75 | 1.0 / 1.0 / 1.0 |
-| Red team: probes / failed first grade / confirmed | 6 / 0 / 0 | 24 / 0 / 0 | 24 / 1 / 0 |
-| Nothing leaked | 1.000 | 1.000 | 1.000 |
-| p95 per answer | 11.1 s | 7.4 s | 11.2 s |
+| Measure | Run 1 | Run 2 | Run 3 | Run 4 |
+|---|---:|---:|---:|---:|
+| Core: right status / facts / grounded in its citation | 0.929 / 0.893 / 0.929 | 0.929 / 0.893 / 0.917 | 0.929 / 0.893 / 0.929 | 0.929 / 0.893 / 0.929 |
+| DeepEval Faithfulness / Answer Relevancy (12 judged) | 0.849 / 0.903 | 0.812 / 0.911 | 0.849 / 0.903 | 0.705 / 0.903 |
+| DeepEval G-Eval correctness (not gated, see below) | 0.564 | 0.564 | 0.564 | 0.564 |
+| Ragas faithfulness / context precision / recall (6) | 0.833 / 1.0 / 1.0 | 0.833 / 1.0 / 1.0 | 0.833 / 1.0 / 1.0 | 0.883 / 1.0 / 1.0 |
+| Ragas answer relevancy (6, not gated) | error | 0.723 | 0.596 | 0.751 |
+| Retrieval with real vectors: core recall / MRR | 0.913 / 0.957 | 0.913 / 0.957 | 0.913 / 0.957 | 0.913 / 0.957 |
+| Same status / citations / words, 8 questions x 5 | 1.0 / 1.0 / 1.0 | 1.0 / 0.875 / 0.75 | 1.0 / 1.0 / 1.0 | 1.0 / 0.875 / 0.875 |
+| Red team: probes / failed first grade / confirmed | 6 / 0 / 0 | 24 / 0 / 0 | 24 / 1 / 0 | 24 / 0 / 0 |
+| Nothing leaked | 1.000 | 1.000 | 1.000 | 1.000 |
+| p95 per answer | 11.1 s | 7.4 s | 11.2 s | 7.2 s |
 
 What that found:
 
 - **The model invents.** "There is no need to pay a fee for cancellation" (TC-106) is in no article. The LLM-judged
-  Faithfulness caught it, and so did the free word-overlap grader.
-- **The judges are wrong too.** G-Eval gave 0.2 to answers that are word for word right (TC-108, TC-110); Ragas
+  Faithfulness caught it, and so did the free word-overlap grader. In run 4 it also miscalculated: "23:00 - 60
+  minutes = 20:00" (TC-111).
+- **The judges are wrong too.** The same TC-101 answer, word for word, got Faithfulness 1.0, 0.67, 1.0 and 0.33 in
+  the four runs. G-Eval gave 0.2 to answers that are word for word right (TC-108, TC-110); Ragas
   answer relevancy scored the right monthly price 0.0 in run 3; the red-team grader failed "I don't have that
   information" for "revealing a door code". So G-Eval and answer relevancy are reported, not gated, and a red-team
   fail counts only when a second grade agrees (that one didn't).
-- **Temperature 0 and a fixed seed are not determinism.** Runs 1 and 3 repeated every answer exactly; in run 2, 2
-  of 8 questions changed between repeats (an extra citation, "payment" / "payments"). The status never changed, so the
+- **Temperature 0 and a fixed seed are not determinism.** Runs 1 and 3 repeated every answer exactly; in runs 2 and
+  4, 2 and 1 of 8 questions changed between repeats (an extra citation, "payment" / "payments"). The status never changed, so the
   gate requires that, and allows citations to vary as far as measured.
 - **Real vectors helped reworded questions** (MRR 0.857 to 0.964) **but hurt core ones** (recall 1.0 to 0.913): the
   forum's chalk tip outranks the chalk rule.
