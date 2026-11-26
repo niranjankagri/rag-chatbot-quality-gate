@@ -42,16 +42,14 @@ def offline_metrics() -> dict:
 def judged_metrics() -> dict:  # pragma: needs ollama
     """Ragas' LLM metrics with a local judge. Ollama speaks the OpenAI API under /v1."""
     from openai import OpenAI
-    from ragas.embeddings import embedding_factory
+    from ragas.embeddings import OpenAIEmbeddings
     from ragas.llms import llm_factory
     from ragas.metrics.collections import AnswerRelevancy, ContextPrecisionWithReference, ContextRecall, Faithfulness
 
     base = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/") + "/v1"
     client = OpenAI(base_url=base, api_key="ollama")  # Ollama ignores the key, the client needs one
     llm = llm_factory(os.environ.get("JUDGE_MODEL", "qwen2.5:7b"), provider="openai", client=client, temperature=0)
-    embeddings = embedding_factory(
-        "openai", model=os.environ.get("BELAY_EMBED_MODEL", "nomic-embed-text"), client=client
-    )
+    embeddings = OpenAIEmbeddings(client=client, model=os.environ.get("BELAY_EMBED_MODEL", "nomic-embed-text"))
     return {
         "faithfulness": Faithfulness(llm=llm),
         "context_precision": ContextPrecisionWithReference(llm=llm),
