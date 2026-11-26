@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/niranjankagri/rag-chatbot-quality-gate/schemas/chat_response.schema.json",
+  "title": "Chat response",
+  "description": "What POST /chat returns, and the data of the final 'done' event of POST /chat/stream. Written by hand from the API documentation, not generated from the server code, so a server change that breaks clients fails the contract test.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["answer", "status", "citations", "trace_id", "latency_ms", "generator", "usage"],
+  "properties": {
+    "answer": {"type": "string", "minLength": 1},
+    "status": {"enum": ["answered", "not_found", "refused"]},
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Z][0-9]+$"},
+          "title": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "contexts": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "text"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Z][0-9]+$"},
+          "title": {"type": "string"},
+          "text": {"type": "string"}
+        }
+      }
+    },
+    "trace_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "latency_ms": {"type": "number", "minimum": 0},
+    "generator": {"type": "string", "minLength": 1},
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_tokens", "completion_tokens"],
+      "properties": {
+        "prompt_tokens": {"type": "integer", "minimum": 0},
+        "completion_tokens": {"type": "integer", "minimum": 0}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "answered"}}},
+      "then": {"properties": {"citations": {"minItems": 1}}}
+    },
+    {
+      "if": {"properties": {"status": {"enum": ["not_found", "refused"]}}},
+      "then": {"properties": {"citations": {"maxItems": 0}}}
+    }
+  ]
+}

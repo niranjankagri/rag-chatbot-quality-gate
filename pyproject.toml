@@ -1,0 +1,66 @@
+[project]
+name = "rag-chatbot-quality-gate"
+version = "1.0.0"
+description = "A RAG chatbot behind an HTTP API, tested with API tests, DeepEval, Ragas and a Promptfoo red-team scan, all gated in CI"
+requires-python = ">=3.13"
+license = "MIT"
+# The service itself: pinned, so a new release can't change a build without a commit
+dependencies = [
+    "fastapi==0.165.0",
+    "uvicorn==0.54.0",
+    "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+# Everything the tests and evaluations need. DeepEval and Ragas are evaluation tools, not part of
+# the service, so a production image would install only the dependencies above.
+dev = [
+    "pytest==9.2.0",
+    "pytest-cov==7.1.0",
+    "ruff==0.17.4",
+    "jsonschema==4.26.0",
+    "deepeval==4.3.6",
+    "ragas==0.4.4",
+    # Ragas' offline string metrics need these (BLEU, ROUGE, Levenshtein)
+    "sacrebleu==2.6.0",
+    "rouge_score==0.1.2",
+    "rapidfuzz==3.14.6",
+]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers"
+# Set to silence a warning from pytest-asyncio, which DeepEval installs; no test here is async
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "model: needs a running Ollama (generator, judge or embeddings); skipped unless --model is given",
+    "live: runs against a server at BELAY_BASE_URL instead of the in-process app",
+]
+
+[tool.coverage.run]
+source = ["belay", "qa"]
+branch = true
+# check_all only starts a server and other processes; everything it runs is covered on its own
+omit = ["*/qa/check_all.py"]
+
+[tool.coverage.report]
+show_missing = true
+# Code that needs a running Ollama runs in the weekly model workflow, not in this test run
+exclude_also = ["pragma: needs ollama"]
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+# SIM905: the stopword list reads better as one string than as 90 quoted words
+ignore = ["SIM905"]

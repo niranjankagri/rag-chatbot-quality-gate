@@ -1,0 +1,94 @@
+# The same assistant answering with a real local model (Ollama on the runner's CPU), judged by a
+# second local model: DeepEval faithfulness / relevancy / correctness, Ragas faithfulness and
+# context precision / recall, a stability check (same question 5 times), and a Promptfoo red-team
+# scan. Gated by configs/model_gate.toml.
+#
+# Not a required check: a model's answers and a judge's grades vary between runs, so a red run is a
+# finding to review, not a broken build. Weekly, on demand, and on pull requests that touch the
+# parts a model run depends on.
+name: Model evaluations
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/belay/**"
+      - "knowledge/**"
+      - "datasets/**"
+      - "promptfooconfig.redteam.yaml"
+      - "configs/model_gate.toml"
+      - ".github/workflows/model-evals.yml"
+  schedule:
+    - cron: '20 22 * * 5'   # Friday 22:20 UTC
+  workflow_dispatch:
+    inputs:
+      judge_limit:
+        description: "How many answerable cases the judges grade"
+        default: "12"
+
+concurrency:
+  group: model-evals-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BELAY_MODEL: llama3.2:3b
+  BELAY_EMBED_MODEL: nomic-embed-text
+  # Grades the answers; bigger than the model it grades (a 3b grader was not reliable)
+  JUDGE_MODEL: qwen2.5:7b
+  OLLAMA_URL: http://localhost:11434
+
+jobs:
+  evaluate:
+    name: Real-model evaluations and red team
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    services:
+      ollama:
+        image: ollama/ollama:0.40.15
+        ports:
+          - 11434:11434
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install
+        run: |
+          pip install -e ".[dev]"
+          npm ci
+
+      - name: Pull the models
+        run: |
+          for m in "$BELAY_MODEL" "$BELAY_EMBED_MODEL" "$JUDGE_MODEL"; do
+            curl --fail --silent --show-error "$OLLAMA_URL/api/pull" -d "{\"model\":\"$m\",\"stream\":false}"
+            echo " $m"
+          done
+
+      - name: Suites, red team and model gate
+        timeout-minutes: 100
+        run: python -m qa.check_all --model --judge-limit "${{ inputs.judge_limit || '12' }}"
+
+      - name: Gate table in the job summary
+        if: ${{ !cancelled() }}
+        run: cat reports/model_gate.md >> "$GITHUB_STEP_SUMMARY" || echo "No gate table (an earlier step failed)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the reports, traces and red-team findings
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: model-reports
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 30

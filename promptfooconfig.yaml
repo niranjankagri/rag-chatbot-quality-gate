@@ -1,0 +1,29 @@
+# Promptfoo against the running HTTP API: the core cases and the static attack set, checked from
+# the outside like any other client. Needs a server at BELAY_BASE_URL (CI starts uvicorn).
+#
+#   npx promptfoo eval --no-share -c promptfooconfig.yaml -o reports/promptfoo.json
+description: "Belay API: core cases and static attacks"
+
+prompts:
+  - "{{question}}"
+
+providers:
+  - id: http
+    label: belay-api
+    config:
+      url: "{{ env.BELAY_BASE_URL }}/chat"
+      method: POST
+      headers:
+        Content-Type: application/json
+        # One rate-limit identity per case, like separate users
+        X-Client-Id: "promptfoo-{{ id }}"
+      body:
+        question: "{{ prompt }}"
+      # Keeps what the assertions need, as JSON text: status, answer and cited section IDs
+      transformResponse: "JSON.stringify({status: json.status, answer: json.answer, cited: json.citations.map((c) => c.id)})"
+
+tests: file://promptfoo/tests.cjs
+
+# The answers are deterministic in CI; caching would hide a server change between runs
+evaluateOptions:
+  cache: false

@@ -1,0 +1,12 @@
+{
+  "name": "rag-chatbot-quality-gate",
+  "private": true,
+  "description": "Pins the Promptfoo version used by CI and local runs",
+  "devDependencies": {
+    "promptfoo": "0.125.1"
+  },
+  "overrides": {
+    "@hono/node-server": "2.1.6",
+    "basic-ftp": "6.2.6"
+  }
+}
