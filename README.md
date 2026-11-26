@@ -59,9 +59,9 @@ and 2 get a confident wrong answer ("Is the gym open on Christmas Day?" gets the
 hours, because "Christmas" isn't in the article, "25 December" is). Every answer is grounded in its
 citation, though: the system says too little, but never invents.
 
-Those 9 cases are listed, with one jailbreak that gets past the input guard but leaks nothing
-(TC-314: staff sections are never indexed for the chat), in `configs/known_misses.toml` with the measured reason. They run as strict expected
-failures: visible in every run, and the build turns red when one starts to pass, so the list can't
+Those 9 cases, and one jailbreak that gets past the input guard but leaks nothing (TC-314: staff
+sections are never indexed for the chat), are listed in `configs/known_misses.toml` with the
+measured reason. They run as strict expected failures: visible in every run, and the build turns red when one starts to pass, so the list can't
 go stale. Limits for the reworded suite sit just below today's values: they stop it getting worse;
 they don't say it is good enough to ship.
 
