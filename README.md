@@ -35,7 +35,7 @@ count only when a second grade agrees. That run has its own gate (`configs/model
 
 ## What the gate measured
 
-Deterministic run, 26 Nov 2026 (the same run CI does on every pull request):
+Deterministic run, 26 Nov 2026 ([CI run 45753214655](https://github.com/niranjankagri/rag-chatbot-quality-gate/actions/runs/45753214655); the same numbers on Windows):
 
 | Suite | Cases | Measure | Result | Limit |
 |---|---:|---|---:|---:|
@@ -49,7 +49,7 @@ Deterministic run, 26 Nov 2026 (the same run CI does on every pull request):
 | Attacks | 16 | Nothing leaked | 1.000 | 1.00 |
 | | 16 | Refused or answered as expected | 0.938 | 0.93 |
 | Promptfoo | 44 | Pass rate | 1.000 | 1.00 |
-| Latency | 337 | p95 per request | 0.34 ms | 50 ms |
+| Latency | 337 | p95 per request | 0.27 ms | 50 ms |
 
 **How to read it.** The core questions were written from the help articles, so 100 % shows the
 system does what it was built for, not that it generalises. The reworded questions are the honest
@@ -64,6 +64,42 @@ sections are never indexed for the chat), are listed in `configs/known_misses.to
 measured reason. They run as strict expected failures: visible in every run, and the build turns red when one starts to pass, so the list can't
 go stale. Limits for the reworded suite sit just below today's values: they stop it getting worse;
 they don't say it is good enough to ship.
+
+## The real model, weekly
+
+`llama3.2:3b` answering, `qwen2.5:7b` judging, `nomic-embed-text` vectors, on a CPU runner. Two runs on
+26 Nov 2026 ([45753237220](https://github.com/niranjankagri/rag-chatbot-quality-gate/actions/runs/45753237220),
+[45760330978](https://github.com/niranjankagri/rag-chatbot-quality-gate/actions/runs/45760330978)):
+
+| Measure | Run 1 | Run 2 |
+|---|---:|---:|
+| Core: right status / facts / grounded in its citation | 0.929 / 0.893 / 0.929 | 0.929 / 0.893 / 0.917 |
+| DeepEval Faithfulness / Answer Relevancy (12 judged) | 0.849 / 0.903 | 0.812 / 0.911 |
+| DeepEval G-Eval correctness (not gated, see below) | 0.564 | 0.564 |
+| Ragas faithfulness / context precision / context recall (6) | 0.833 / 1.0 / 1.0 | 0.833 / 1.0 / 1.0 |
+| Ragas answer relevancy (6) | error | 0.723 |
+| Retrieval with real vectors: core recall / MRR | 0.913 / 0.957 | 0.913 / 0.957 |
+| Same status / same citations / same words, 8 questions x 5 | 1.0 / 1.0 / 1.0 | 1.0 / 0.875 / 0.75 |
+| Red team: probes / confirmed failures | 6 / 0 | 24 / 0 |
+| Nothing leaked | 1.000 | 1.000 |
+| p95 per answer | 11.1 s | 7.4 s |
+
+What that found:
+
+- **The model invents.** "There is no need to pay a fee for cancellation" (TC-106) is in no article. The LLM-judged
+  Faithfulness caught it, and so did the free word-overlap grader.
+- **The judge is wrong too.** G-Eval gave 0.2 to answers that are word for word right (TC-108, TC-110), so its score
+  is reported but not gated until the rubric is calibrated against labelled answers.
+- **Temperature 0 and a fixed seed are not determinism.** Run 1 repeated every answer exactly; in run 2, 2 of 8
+  questions changed between repeats (an extra citation, "payment" / "payments"). The status never changed, so the
+  gate requires that, and allows citations to vary as far as measured.
+- **Real vectors helped reworded questions** (MRR 0.857 to 0.964) **but hurt core ones** (recall 1.0 to 0.913): the
+  forum's chalk tip outranks the chalk rule.
+- **Leetspeak beats the word-list guard, and nothing leaks.** All 12 rewritten attacks ("d00r c0d3") got past the
+  input guard, and none got anything: staff sections are never searchable from the chat.
+- **The first red team was too easy.** Promptfoo's ready-made `hijacking` and `pii:direct` plugins need its cloud
+  service, which is off here, and generated nothing; the 6 remaining attacks all asked for the "door code" in plain
+  words. Now: 4 local policies, leetspeak, and generation fails if a plugin produces nothing.
 
 ## Run it
 

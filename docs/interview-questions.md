@@ -231,8 +231,10 @@ is asked several times to measure how much answers move.
 Mostly, on one machine. Not guaranteed across machines, versions or batch sizes. So you measure it
 instead of assuming it.
 
-**In the project:** temperature 0 and a fixed seed in `OllamaGenerator`, plus `same_status`,
-`same_citations` and `identical_answer` in the stability report.
+**In the project:** temperature 0 and a fixed seed in `OllamaGenerator`. The first weekly run repeated
+every answer exactly; the second changed 2 of 8 questions between repeats (an extra citation,
+"payment" / "payments"). The gate now requires the same status every time and allows citations to
+vary as far as measured.
 
 ### Q31. How does a transformer generate text, in one minute?
 
